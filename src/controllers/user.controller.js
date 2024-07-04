@@ -21,7 +21,7 @@ const generateAccessAndRefreshTokens = async(userId) =>{
     }
 }
 const registerUser = asyncHandler( async (req, res) => {
-    // get user details from frontend
+    // get user details from frontend -> req.body
     const { fullName, email, username, password } = req.body
 
     // validation - not empty
@@ -87,15 +87,15 @@ const registerUser = asyncHandler( async (req, res) => {
 })
 
 const loginUser = asyncHandler(async (req, res) => {
-    // req body -> data
+    // get user details from frontend -> req.body
     const {email, username, password} = req.body
 
-    // check username or email
+    // check username or email - not empty
     if (!(username || email)) {
         throw new ApiError(400, "username or email is required")
     }
 
-    // find the user
+    // find the user in db
     const user = await User.findOne({
         $or: [{ username }, { email }]
     })
@@ -104,17 +104,17 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User does not exist")
     }
 
-    // password check
+    // Check password
     const isPasswordValid = await user.isPasswordCorrect(password)
 
     if(!isPasswordValid){
-        throw new ApiError(401, "Inavalid user credentials")
+        throw new ApiError(401, "Invalid user credentials")
     }
 
-    // access and refresh token
+    // Generate access and refresh token
     const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
-    // send cookies
+    // Send cookies
     const loggedInUser = await User.findById(user._id).select(
         "-password -refreshToken"
     )
@@ -141,6 +141,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
 
 const logoutUser = asyncHandler(async (req, res) => {
+    //Clear Refresh Token
     await User.findByIdAndUpdate(
         req.user._id,
         {
@@ -157,6 +158,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         secure: true
     }
 
+    //Clear Cookies
     return res.status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
@@ -164,6 +166,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
+    //Get refreshToken from cookies
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
     if (!incomingRefreshToken) {
@@ -171,6 +174,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
     try {
+        //Decode refresh Token
         const decodedToken = jwt.verify(incomingRefreshToken,process.env.REFRESH_TOKEN_SECRET)
     
         const user = await User.findById(decodedToken?._id)
@@ -179,10 +183,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             throw new ApiError(401, "Invalid refresh token")
         }
     
+        //Check Refresh Token
         if (incomingRefreshToken != user?.refreshToken) {
             throw new ApiError(401, "Refresh token is expired or used")
         }
     
+        //Generate new Access and Refresh Token
         const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user._id)
     
         const options = {
@@ -190,6 +196,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             secure: true
         }
     
+        // send cookies
         return res.status(200)
         .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", newRefreshToken, options)
