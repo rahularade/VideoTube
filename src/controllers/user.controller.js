@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js";
-import {uploadOnCloudinary} from "../utils/cloudinary.js";
+import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken";
 
@@ -217,16 +217,20 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 
 const changeCurrentPassword = asyncHandler(async(req, res) => {
+    //get data from req.body
     const {oldPassword, newPassword} = req.body
 
+    //find user using id
     const user = await User.findById(req.user?._id)
 
+    //check password
     const isPasswordValid = await user.isPasswordCorrect(oldPassword)
 
     if(!isPasswordValid){
         throw new ApiError(400,"Invalid Password")
     }
 
+    //update password
     user.password = newPassword
     await user.save({validateBeforeSave:false})
 
@@ -237,9 +241,12 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
 
 
 const getCurrectUser = asyncHandler(async (req,res) => {
-    return res.status(200).json(200,
-        req.user, "Current user fetched successfully"
-    )
+    return res.status(200)
+    .json(new ApiResponse(
+        200,
+        req.user,
+        "User fetched successfully"
+    ))
 })
 
 
@@ -250,7 +257,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are required")
     }
 
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
@@ -276,11 +283,13 @@ const updateUserAvatar = asyncHandler( async(req, res) => {
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
-
+    
     if (!avatar.url) {
         throw new ApiError(400, "Error while uploading on avatar")
     }
-
+    
+    await deleteFromCloudinary(req.user?.avatar) //delete old image from cloudinary
+   
     const user = User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -302,11 +311,15 @@ const updateUserCoverImage = asyncHandler( async(req, res) => {
     }
 
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
-
+    
     if (!coverImage.url) {
         throw new ApiError(400, "Error while uploading on cover image")
     }
-
+    
+    if(req.user?.coverImage){
+        await deleteFromCloudinary(req.user?.coverImage) ////delete old image from cloudinary
+    }
+ 
     const user = User.findByIdAndUpdate(
         req.user?._id,
         {
