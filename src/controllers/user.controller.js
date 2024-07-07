@@ -146,7 +146,9 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: { refreshToken: undefined }
+            $unset: { 
+                refreshToken: 1  //this remove the field from document 
+            }
         },
         {
             new: true  //return new updated user
@@ -419,7 +421,7 @@ const getWatchHistory = asyncHandler( async(req,res) => {
     const user = await User.aggregate([
         {
             $match: {
-                _id: new mongoose.Types.ObjectId(req.user?._id)
+                _id: new mongoose.Types.ObjectId(req.user._id)
             }
         },
         {
@@ -428,25 +430,28 @@ const getWatchHistory = asyncHandler( async(req,res) => {
                 localField: "watchHistory",
                 foreignField: "_id",
                 as:"watchHistory",
-                pipeline:[
+                pipeline:[ //nested pipeline
                     {
                         $lookup: {
                             from: "users",
                             localField: "owner",
                             foreignField: "_id",
                             as:"owner",
-                            pipeline: {
-                                $project: {
-                                    fullName:1,
-                                    username:1,
-                                    avatar:1
+                            pipeline: [ //nested pipeline
+                                {
+                                        $project: {
+                                        fullName:1,
+                                        username:1,
+                                        avatar:1
+                                    }
                                 }
-                            }
+                            ]
                         }
-                    },{
+                    },
+                    {
                         $addFields: {
                             owner: {
-                                $first: "$owner"
+                                $first: "$owner" //Returns the first document
                             }
                         }
                     }
