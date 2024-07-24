@@ -4,7 +4,7 @@ import { User } from "../models/user.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js"
 
 
 const getAllVideos = asyncHandler( async (req, res) =>{
@@ -172,7 +172,7 @@ const updateVideo = asyncHandler( async (req, res) => {
     if (!video) {
         new ApiError(400, "Video not found")
     }
-    
+
     const oldThumbnail = video.thumbnail
 
     if(!(title && description)){
@@ -208,4 +208,25 @@ const updateVideo = asyncHandler( async (req, res) => {
         new ApiResponse(200, updateVideo, "Video Updated Successfully")
     )
 
+})
+
+const deleteVideo = asyncHandler( async (req, res) => {
+     const videoId = req.params
+
+     if (!isValidObjectId(videoId)) {
+        throw new ApiError(200, "Invalid video ID")
+     }
+     
+     const video = await Video.findByIdAndDelete(videoId)
+
+     if (!video) {
+        throw new ApiError(200, "Video not found")
+     }
+
+     await deleteFromCloudinary(video.videoFile)
+     await deleteFromCloudinary(video.thumbnail)
+
+     return res.status(200).json(
+        new ApiResponse(200, video, "Video Deleted Successfully")
+     )
 })
