@@ -27,7 +27,7 @@ const getAllVideos = asyncHandler( async (req, res) =>{
     var videoAggregate; // Declare a variable for video aggregation pipeline
     try{
         // Define the aggregation pipeline
-        videoAggregate = Video.aggregate(
+        videoAggregate = await Video.aggregate(
             [
                 {
                      // Match stage: find videos by title, description, and optionally owner
@@ -82,12 +82,11 @@ const getAllVideos = asyncHandler( async (req, res) =>{
         customLabels: {
             totalDocs: "totalVideos",
             docs: "videos"
-        },
-        skip: (page - 1) * limit,
+        }
     }
 
      // Execute aggregation with pagination
-    Video.aggregatePaginate(videoAggregate, options)
+    await Video.aggregatePaginate(videoAggregate, options)
         .then(result => {
             // Handle case when no videos are found
             if (result?.videos?.length === 0 && userId) {
