@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose, { isValidObjectId } from "mongoose"
 import {Video} from "../models/video.model.js"
 import { User } from "../models/user.model.js"
 import { ApiError } from "../utils/ApiError.js"
@@ -107,4 +107,36 @@ const getAllVideos = asyncHandler( async (req, res) =>{
             throw new ApiError(500, error?.message || "Internal server error in video aggregate Paginate")
         })
     
+})
+
+const publishAVideo = asyncHandler( async (req, res) => {
+    const { title, description } = req.body
+
+    if(!(title && description)){
+        throw new ApiError(400, "Title and Description are required")
+    }
+
+    const videoLocalPath = req.files?.videoFile[0]?.path
+    const thumbnailLocalPath = req.files?.thumbnail[0]?.path
+
+    if(!(videoLocalPath && thumbnailLocalPath)) {
+        throw new ApiError(400, "Video and thumnail are missing")
+    }
+
+    const video = await uploadOnCloudinary(videoLocalPath)
+
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+
+    const videoPublished = await Video.create({
+        title,
+        description,
+        videoFile: video.url,
+        thumbnail: thumbnail.url,
+        duration: video.duration,
+        owner : req.user._id
+    })
+
+    return res.status(201).json(
+        new ApiResponse( 200, videoPublished, "Video Published Successfully")
+    )
 })
