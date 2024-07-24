@@ -158,3 +158,54 @@ const getVideoById = asyncHandler ( async (req, res) => {
         new ApiResponse(200, video, "Video fetched successfully")
     )
 })
+
+const updateVideo = asyncHandler( async (req, res) => {
+    // Update video details like title, description, thumbnail
+    const videoId = req.params
+    const { title, description } = req.body
+
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video ID")
+    }
+
+    const video = await Video.findById(videoId)
+    if (!video) {
+        new ApiError(400, "Video not found")
+    }
+    
+    const oldThumbnail = video.thumbnail
+
+    if(!(title && description)){
+        throw new ApiError(400, "Title and Description are required")
+    }
+
+    const thumbnailLocalPath = req.file?.path
+    if (!thumbnailLocalPath) {
+        throw new ApiError(400, "Thumbnail is missing")
+    }
+
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+    if (!thumbnail.url) {
+        throw new ApiError(400, "Error while uploading a thumbnail")
+    } 
+
+
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set: {
+                title,
+                description,
+                thumbnail: thumbnail.url
+            }
+        },
+        { new: true }
+    )
+        
+    await deleteFromCloudinary(oldThumbnail)
+
+    return res.status(200).json(
+        new ApiResponse(200, updateVideo, "Video Updated Successfully")
+    )
+
+})
