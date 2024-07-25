@@ -38,7 +38,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     }
 
     const userPlaylists = await Playlist.find({
-        owner: new mongoose.Types.ObjectId(userId)
+        owner: userId
     })
 
     if(!userPlaylists){
