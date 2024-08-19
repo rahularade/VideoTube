@@ -4,4 +4,4 @@ This project is a complex backend project that is built with nodejs, expressjs, 
 Project uses all standard practices like JWT, bcrypt, access tokens, refresh Tokens and many more. We have spent a lot of time in building this project and we are sure that you will learn a lot from this project.
 
 
-- [Model link](https://app.eraser.io/workspace/YtPqZ1VogxGy1jzIDkzj?origin=share)
+- [Model link](https://app.eraser.io/workspace/BfiwNCdaTO6ikCGv1sUT?origin=share)
